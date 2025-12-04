@@ -1,0 +1,117 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>골프 머니 계산기 - 18홀 자동 누적 최종판</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+    th, td { border: 1px solid #999; padding: 6px; text-align: center; }
+    input { width: 60px; text-align:center; }
+    button { padding: 10px 18px; font-size: 14px; margin-top: 10px; }
+    .result { margin-top: 20px; font-size: 18px; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+<h2>골프 머니 계산기 (18홀 자동 누적 최종본)</h2>
+
+플레이어 수:
+<select id="playerCount" onchange="setupTable()">
+  <option value="2">2명</option>
+  <option value="3">3명</option>
+  <option value="4" selected>4명</option>
+  <option value="5">5명</option>
+</select><br><br>
+
+기본 타당: <input id="baseRate" value="2">
+버디($): <input id="birdieRate" value="5">
+이글($): <input id="eagleRate" value="20">
+스킨($): <input id="skinRate" value="2">
+
+<div id="tableArea"></div>
+
+<button onclick="calculateAll()">자동 전체 계산</button>
+<button onclick="location.reload()">초기화</button>
+
+<div class="result" id="finalResult"></div>
+
+<script>
+function setupTable() {
+  const players = parseInt(document.getElementById("playerCount").value);
+  let html = "<table><tr><th>Hole</th><th>Par</th>";
+  for(let i=1;i<=players;i++) html += `<th>P${i}</th>`;
+  html += "</tr>";
+
+  for(let h=1;h<=18;h++){
+    html += `<tr><td>${h}</td><td><input value="4"></td>`;
+    for(let i=1;i<=players;i++) html += "<td><input></td>";
+    html += "</tr>";
+  }
+
+  html += "</table>";
+  document.getElementById("tableArea").innerHTML = html;
+}
+
+setupTable();
+
+function calculateAll(){
+  const base = Number(baseRate.value);
+  const birdie = Number(birdieRate.value);
+  const eagle = Number(eagleRate.value);
+  const skin = Number(skinRate.value);
+  const players = parseInt(playerCount.value);
+
+  let totals = new Array(players).fill(0);
+  const rows = document.querySelectorAll("table tr");
+
+  for(let r=1;r<rows.length;r++){
+    const cells = rows[r].querySelectorAll("input");
+    const par = Number(cells[0].value);
+    let scores = [];
+    for(let p=1;p<=players;p++){
+      scores.push(Number(cells[p].value || 0));
+    }
+
+    for(let i=0;i<players;i++){
+      for(let j=i+1;j<players;j++){
+        const diff = scores[j]-scores[i];
+        totals[i] += diff * base;
+        totals[j] -= diff * base;
+      }
+    }
+
+    const minScore = Math.min(...scores);
+    const minCount = scores.filter(s=>s===minScore).length;
+
+    for(let i=0;i<players;i++){
+      const diff = scores[i]-par;
+      if(diff === -2){
+        totals[i] += eagle*(players-1);
+        for(let j=0;j<players;j++) if(j!==i) totals[j] -= eagle;
+      }
+      else if(diff === -1){
+        totals[i] += birdie*(players-1);
+        for(let j=0;j<players;j++) if(j!==i) totals[j] -= birdie;
+      }
+    }
+
+    if(minCount===1 && minScore<=par){
+      const winner = scores.indexOf(minScore);
+      totals[winner] += skin*(players-1);
+      for(let j=0;j<players;j++) if(j!==winner) totals[j] -= skin;
+    }
+  }
+
+  let text = "<h3>18홀 최종 누적 결과</h3>";
+  totals.forEach((t,i)=>{
+    text += `Player ${i+1}: $${t}<br>`;
+  });
+
+  document.getElementById("finalResult").innerHTML = text;
+}
+</script>
+
+</body>
+</html>
